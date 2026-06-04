@@ -9,7 +9,7 @@
 const CONFIG = {
   sheetId: "17t5hPnQA253dSb2ThffFl3Hi31A0atNRl6mZaH9uzhU",
   gid: "0",
-  siteTitle: "Catalogo prodotti",
+  siteTitle: "IL MERCATINO",
   defaultViewMode: "image-list",
   requestTimeoutMs: 12000
 };
