@@ -1,118 +1,128 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Il Mercatino</title>
+  <meta name="description" content="Il Mercatino: catalogo prodotti tech disponibili, filtrabile e ordinabile." />
   
-  <!-- Content Security Policy per la massima sicurezza -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://drive.google.com https://images.unsplash.com; connect-src 'self' https://vec.mercatino.workers.dev;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; connect-src 'self' https://vec.mercatino.workers.dev;">
 
-  <!-- Prefetching per ottimizzare i tempi di risposta del Worker di Cloudflare -->
   <link rel="dns-prefetch" href="https://vec.mercatino.workers.dev">
   <link rel="preconnect" href="https://vec.mercatino.workers.dev" crossorigin>
 
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="favicon.png" />
   <link rel="stylesheet" href="style.css" />
-  <title>Il Mercatino</title>
 </head>
 <body>
-
-  <header class="site-header">
-    <div class="header-container">
-      <h1 class="site-title">Il Mercatino</h1>
-      <button class="cart-toggle-button" data-open-cart aria-label="Apri carrello">
-        🛒 Carrello <span id="cart-count" class="cart-badge">0</span>
+  <header id="site-header" class="site-header">
+    <div class="header-inner">
+      <p class="header-title">Il Mercatino</p>
+      <button class="cart-toggle" type="button" data-open-cart>
+        Carrello <span id="cart-count">0</span>
       </button>
     </div>
   </header>
 
-  <main class="main-content">
-    <!-- Barra dei Filtri e di Ricerca -->
-    <section class="filters-bar" aria-label="Filtri e ordinamento">
-      <div class="search-box">
-        <input type="text" id="search-input" placeholder="Cerca un articolo..." aria-label="Cerca prodotti">
+  <main>
+    <section class="instructions-box" aria-label="Istruzioni">
+      <p>📦 Ogni prodotto è disponibile in una sola unità.</p>
+      <p>💬 I prezzi indicati sono trattabili.</p>
+      <p>🔎 Puoi filtrare e ordinare la lista usando i controlli in basso.</p>
+      <p>🖼️ Puoi cambiare visualizzazione scegliendo tra elenco semplice, elenco con immagine e griglia.</p>
+      <p>🛒 Aggiungi al carrello i prodotti che ti interessano.</p>
+      <p>📋 Dal carrello puoi copiare un riepilogo con la lista dei prodotti selezionati e il totale, così da inviarlo facilmente tramite messaggio.</p>
+    </section>
+
+    <section class="controls-card" aria-label="Controlli catalogo">
+      <div class="search-wrapper">
+        <input id="search-input" type="search" placeholder="Cerca tra gli articoli..." aria-label="Cerca nel catalogo" />
       </div>
-      <div class="filters-group">
-        <select id="type-filter" aria-label="Filtra per categoria">
-          <option value="">Tutte le categorie</option>
-        </select>
-        <select id="status-filter" aria-label="Filtra per stato">
-          <option value="">Tutti gli stati</option>
-        </select>
-        <select id="sort-select" aria-label="Ordina i prodotti">
-          <option value="name-asc">Nome (A-Z)</option>
-          <option value="name-desc">Nome (Z-A)</option>
-          <option value="price-asc">Prezzo (Crescente)</option>
-          <option value="price-desc">Prezzo (Decrescente)</option>
-          <option value="type-asc">Categoria</option>
-          <option value="status-asc">Stato</option>
-        </select>
+
+      <div class="filters-grid">
+        <div class="select-wrapper">
+          <select id="type-filter" aria-label="Filtra per tipo">
+            <option value="">Tutti i tipi</option>
+          </select>
+        </div>
+
+        <div class="select-wrapper">
+          <select id="status-filter" aria-label="Filtra per stato">
+            <option value="">Tutti gli stati</option>
+          </select>
+        </div>
+
+        <div class="select-wrapper">
+          <select id="sort-select" aria-label="Ordina per">
+            <option value="name-asc">Nome: A-Z</option>
+            <option value="name-desc">Nome: Z-A</option>
+            <option value="price-asc">Prezzo: dal più basso</option>
+            <option value="price-desc">Prezzo: dal più alto</option>
+            <option value="type-asc">Tipo</option>
+            <option value="status-asc">Stato</option>
+          </select>
+        </div>
       </div>
-      <div class="view-modes" aria-label="Modalità di visualizzazione">
-        <button data-view-mode="simple" title="Vista semplice">☰</button>
-        <button data-view-mode="image-list" title="Vista lista">▤</button>
-        <button data-view-mode="grid" title="Vista griglia">㗊</button>
+
+      <div class="view-switcher">
+        <button type="button" data-view-mode="simple" title="Elenco semplice">Elenco semplice</button>
+        <button type="button" data-view-mode="image-list" title="Elenco con immagine">Elenco con immagine</button>
+        <button type="button" data-view-mode="grid" title="Griglia">Griglia</button>
       </div>
     </section>
 
-    <!-- Stati di Caricamento ed Errore -->
-    <div id="loading" class="status-notice">Caricamento prodotti in corso...</div>
-    <div id="error" class="status-notice error-notice" hidden></div>
-    <div id="empty-state" class="status-notice" hidden>Nessun prodotto corrisponde ai criteri di ricerca.</div>
-
-    <!-- Griglia Prodotti -->
-    <section id="products-grid" class="products-grid view-image-list"></section>
+    <section class="catalog-section" aria-label="Catalogo prodotti">
+      <div id="loading" class="notice">Caricamento prodotti...</div>
+      <div id="error" class="notice error" hidden></div>
+      <div id="products-grid" class="products-grid view-image-list"></div>
+      <p id="empty-state" class="notice" hidden>Nessun prodotto trovato.</p>
+    </section>
   </main>
 
-  <!-- Pannello Carrello (Accessibile) -->
-  <div id="cart-backdrop" class="cart-backdrop" hidden data-close-cart></div>
-  <aside id="cart-panel" class="cart-panel" aria-hidden="true" tabindex="-1" aria-label="Pannello Carrello">
+  <aside id="cart-panel" class="cart-panel" aria-hidden="true" tabindex="-1">
     <div class="cart-header">
-      <h2>Il tuo Carrello</h2>
-      <button class="close-cart-button" data-close-cart aria-label="Chiudi carrello">×</button>
+      <h2>Carrello</h2>
+      <button class="icon-button" type="button" data-close-cart aria-label="Chiudi carrello">×</button>
     </div>
-    <div id="cart-items" class="cart-body">
-      <!-- I prodotti del carrello verranno iniettati qui -->
-    </div>
+
+    <div id="cart-items" class="cart-items"></div>
+
     <div class="cart-footer">
-      <div class="cart-total-row">
-        <span>Totale stimato:</span>
-        <strong id="cart-total">0,00 €</strong>
-      </div>
-      <div class="cart-actions-group">
-        <button id="copy-cart-button" class="primary-button text-center">Copia riepilogo carrello</button>
-        <button id="clear-cart-button" class="secondary-button text-center">Svuota</button>
-      </div>
+      <p class="cart-total">Totale: <strong id="cart-total">€0</strong></p>
+      <button id="copy-cart-button" class="primary-button" type="button">Copia riepilogo carrello</button>
+      <button id="clear-cart-button" class="ghost-button" type="button">Svuota carrello</button>
     </div>
   </aside>
 
-  <!-- Modal per zoom immagini -->
-  <div id="image-modal" class="image-modal" hidden>
-    <button class="close-modal-button" data-close-image-modal aria-label="Chiudi immagine">×</button>
-    <img id="image-modal-img" src="" alt="">
+  <div id="cart-backdrop" class="backdrop" data-close-cart hidden></div>
+  <div id="toast" class="toast" hidden>Riepilogo copiato negli appunti.</div>
+
+  <div id="image-modal" class="image-modal" role="dialog" aria-modal="true" aria-label="Immagine prodotto ingrandita" hidden>
+    <button class="icon-button image-modal-close" type="button" data-close-image-modal aria-label="Chiudi visualizzazione immagine">×</button>
+    <div class="image-modal-content">
+      <img id="image-modal-img" src="" alt="" />
+    </div>
   </div>
 
-  <!-- Toast Notifica Copia -->
-  <div id="toast" class="toast-notification" hidden>📋 Riepilogo copiato negli appunti!</div>
-
-  <!-- Template HTML sicuro per la clonazione via JS (Zero XSS) -->
   <template id="product-card-template">
     <article class="product-card">
-      <div class="product-image-container">
-        <button class="product-image-button" aria-label="Ingrandisci immagine">
-          <img class="product-image" src="" alt="" loading="lazy" decoding="async">
+      <div class="product-image-box">
+        <button class="product-image-button" type="button" aria-label="Ingrandisci immagine prodotto">
+          <img class="product-image" src="" alt="" loading="lazy" decoding="async" />
         </button>
       </div>
-      <div class="product-details">
-        <div class="product-header">
-          <h2 class="product-title"></h2>
-          <div class="product-meta"></div>
+      <div class="product-content">
+        <div class="product-info-header">
+          <h3 class="product-title"></h3>
+          <div class="product-badges"></div>
         </div>
-        <p class="notes"></p>
-        <div class="product-footer-row">
-          <span class="price"></span>
-          <div class="card-actions">
-            <a class="secondary-button" target="_blank" rel="noopener">Dettagli</a>
-            <button class="primary-button">Aggiungi</button>
+        <p class="product-notes"></p>
+        <div class="product-footer">
+          <p class="product-price"></p>
+          <div class="product-actions">
+            <a class="secondary-button text-center" target="_blank" rel="noopener">Dettagli</a>
+            <button class="primary-button" type="button">Aggiungi</button>
           </div>
         </div>
       </div>

@@ -1,5 +1,4 @@
 const CONFIG = {
-  // Configurato con il tuo URL sicuro di Cloudflare Workers
   apiUrl: "https://vec.mercatino.workers.dev/",
   siteTitle: "Il Mercatino",
   defaultViewMode: "image-list",
@@ -15,6 +14,7 @@ const state = {
 };
 
 const els = {
+  header: document.querySelector("#site-header"),
   loading: document.querySelector("#loading"),
   error: document.querySelector("#error"),
   grid: document.querySelector("#products-grid"),
@@ -37,10 +37,11 @@ const els = {
   template: document.querySelector("#product-card-template")
 };
 
-// Event Listeners Globali e di Controllo
+// Event Listeners Globali
 document.addEventListener("click", handleGlobalClick);
 document.addEventListener("keydown", handleKeydown);
 window.addEventListener("popstate", handlePopState);
+window.addEventListener("scroll", handleWindowScroll);
 
 els.search.addEventListener("input", () => { applyFilters(); updateURLParams(); });
 els.typeFilter.addEventListener("change", () => { applyFilters(); updateURLParams(); });
@@ -55,6 +56,7 @@ async function init() {
   document.title = CONFIG.siteTitle;
   setViewMode(state.viewMode, false);
   readURLParams();
+  handleWindowScroll();
 
   try {
     state.products = await fetchProductsFromWorker();
@@ -64,9 +66,17 @@ async function init() {
     renderCart();
   } catch (error) {
     console.error(error);
-    showError("Impossibile caricare i prodotti in sicurezza. Riprova più tardi.");
+    showError("Impossibile caricare i prodotti. Riprova più tardi.");
   } finally {
     els.loading.hidden = true;
+  }
+}
+
+function handleWindowScroll() {
+  if (window.scrollY > 50) {
+    els.header.classList.add("is-sticky");
+  } else {
+    els.header.classList.remove("is-sticky");
   }
 }
 
@@ -96,12 +106,17 @@ function updateURLParams() {
 }
 
 function populateFilters(products) {
-  fillSelect(els.typeFilter, uniqueValues(products.map(p => p.type)));
-  fillSelect(els.statusFilter, uniqueValues(products.map(p => p.status)));
+  fillSelect(els.typeFilter, uniqueValues(products.map(p => p.type)), "Tutti i tipi");
+  fillSelect(els.statusFilter, uniqueValues(products.map(p => p.status)), "Tutti gli stati");
 }
 
-function fillSelect(select, values) {
-  while (select.options.length > 1) select.remove(1);
+function fillSelect(select, values, defaultText) {
+  while (select.options.length > 0) select.remove(0);
+  const defOpt = document.createElement("option");
+  defOpt.value = "";
+  defOpt.textContent = defaultText;
+  select.appendChild(defOpt);
+  
   values.forEach(value => {
     const option = document.createElement("option");
     option.value = value;
@@ -149,16 +164,16 @@ function setViewMode(mode, shouldSave = true) {
   state.viewMode = allowedModes.includes(mode) ? mode : CONFIG.defaultViewMode;
 
   els.grid.className = `products-grid view-${state.viewMode}`;
-  els.viewButtons.forEach(btn => btn.classList.toggle("is-active", btn.dataset.viewMode === state.viewMode));
+  els.viewButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.viewMode === state.viewMode));
 
   if (shouldSave) localStorage.setItem("showroomViewMode", state.viewMode);
 }
 
-function getStatusClass(status) {
+function getStatusBadgeClass(status) {
   const normalized = String(status || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (normalized === "disponibile") return "status-available";
-  if (normalized === "in trattativa") return "status-negotiating";
-  if (normalized === "esaurito") return "status-sold";
+  if (normalized === "disponibile") return "badge-green";
+  if (normalized === "in trattativa") return "badge-yellow";
+  if (normalized === "esaurito") return "badge-red";
   return "";
 }
 
@@ -186,12 +201,12 @@ function renderProducts() {
 
     clone.querySelector(".product-title").textContent = product.name;
     
-    const metaContainer = clone.querySelector(".product-meta");
+    const badgesContainer = clone.querySelector(".product-badges");
     if (product.type) {
       const typeBadge = document.createElement("span");
       typeBadge.className = "badge";
       typeBadge.textContent = product.type;
-      metaContainer.appendChild(typeBadge);
+      badgesContainer.appendChild(typeBadge);
     }
     
     const normalizedStatus = String(product.status || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -199,14 +214,14 @@ function renderProducts() {
 
     if (product.status) {
       const statusBadge = document.createElement("span");
-      statusBadge.className = `badge status-badge ${getStatusClass(product.status)}`;
+      statusBadge.className = `badge ${getStatusBadgeClass(product.status)}`;
       statusBadge.textContent = product.status;
-      metaContainer.appendChild(statusBadge);
+      badgesContainer.appendChild(statusBadge);
     }
 
-    clone.querySelector(".price").textContent = product.priceRaw || new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(product.price);
+    clone.querySelector(".product-price").textContent = product.priceRaw || new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(product.price);
     
-    const notesEl = clone.querySelector(".notes");
+    const notesEl = clone.querySelector(".product-notes");
     if (product.notes) notesEl.textContent = product.notes;
     else notesEl.remove();
 
@@ -214,19 +229,18 @@ function renderProducts() {
     if (product.link) detailBtn.href = product.link;
     else {
       detailBtn.removeAttribute("href");
-      detailBtn.classList.add("is-disabled");
+      detailBtn.classList.add("disabled");
     }
 
-    // Gestione prodotti Esauriti (Disabilitazione pulsante d'acquisto)
-    const cartBtn = clone.querySelector(".card-actions .primary-button");
+    const cartBtn = clone.querySelector(".product-actions .primary-button");
     if (isSoldOut) {
       cartBtn.textContent = "Non disponibile";
       cartBtn.disabled = true;
-      cartBtn.className = "primary-button is-disabled";
+      cartBtn.className = "primary-button disabled";
     } else {
       const isInCart = Boolean(state.cart[product.id]);
       cartBtn.textContent = isInCart ? "Nel carrello" : "Aggiungi";
-      cartBtn.className = isInCart ? "primary-button is-added" : "primary-button";
+      cartBtn.className = isInCart ? "primary-button active" : "primary-button";
       cartBtn.dataset.addToCart = product.id;
     }
 
@@ -275,7 +289,14 @@ function handleGlobalClick(event) {
   const imgBtn = event.target.closest(".product-image-button[data-image-url]");
   if (imgBtn) return openImageModal(imgBtn.dataset.imageUrl, imgBtn.dataset.imageAlt);
 
-  if (event.target.closest("[data-close-image-modal]") || event.target === els.imageModal) return closeImageModal();
+  // Gestione chiusura cliccando all'esterno o sulla X (Problema 2)
+  if (
+    event.target.closest("[data-close-image-modal]") || 
+    event.target === els.imageModal || 
+    event.target.classList.contains("image-modal-content")
+  ) {
+    return closeImageModal();
+  }
 
   const addButton = event.target.closest("[data-add-to-cart]");
   if (addButton) return addToCart(addButton.dataset.addToCart);
@@ -292,6 +313,17 @@ function handleKeydown(event) {
     closeImageModal();
     closeCart(true);
   }
+}
+
+function openImageModal(url, alt) {
+  els.imageModalImg.src = url;
+  els.imageModalImg.alt = alt || "";
+  els.imageModal.hidden = false;
+}
+
+function closeImageModal() {
+  els.imageModal.hidden = true;
+  els.imageModalImg.src = "";
 }
 
 function addToCart(id) {
@@ -337,7 +369,7 @@ function renderCart() {
 
   if (!items.length) {
     const p = document.createElement("p");
-    p.className = "notice";
+    p.className = "cart-empty-notice";
     p.textContent = "Il carrello è vuoto.";
     els.cartItems.appendChild(p);
   } else {
@@ -353,17 +385,20 @@ function renderCart() {
       row.appendChild(thumb);
 
       const info = document.createElement("div");
+      info.className = "cart-item-details";
       const h3 = document.createElement("h3");
       h3.textContent = product.name;
       const priceP = document.createElement("p");
+      priceP.className = "cart-item-price";
       priceP.textContent = product.priceRaw || new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(product.price);
       info.appendChild(h3);
       info.appendChild(priceP);
       row.appendChild(info);
 
       const delBtn = document.createElement("button");
-      delBtn.className = "remove-cart-button";
+      delBtn.className = "icon-button remove-item";
       delBtn.textContent = "×";
+      delBtn.type = "button";
       delBtn.dataset.removeFromCart = product.id;
       row.appendChild(delBtn);
 
@@ -390,7 +425,6 @@ function copyCartSummary() {
     navigator.clipboard.writeText(summary)
       .then(() => {
         showToast();
-        // Feedback visuale temporaneo sul pulsante di copia
         const originalText = els.copyCartButton.textContent;
         els.copyCartButton.textContent = "✓ Copiato!";
         els.copyCartButton.setAttribute("data-copied", "true");
@@ -400,7 +434,7 @@ function copyCartSummary() {
           els.copyCartButton.removeAttribute("data-copied");
         }, 2000);
       })
-      .catch(err => console.error("Errore nella copia del riepilogo: ", err));
+      .catch(err => console.error("Errore nella copia: ", err));
   }
 }
 
